@@ -1,4 +1,5 @@
 # PresuWhats — Handoff Log (for any AI to catch on)
+> **⚡ ESTADO ACTUAL (2026-10-21): V1.2 DESPLEGADA Y VALIDADA en https://presuwhats.vercel.app** (URL pública definitiva; el dominio `presuwhats.es` queda descartado). E2E 47/47 PASS en produccion, tests 35/35 PASS, build OK. **Empieza por `NEXT_STEPS.md`** (guia vigente de traspaso) en vez de por este log historico. Este documento es el historial de cambios, desactualizado en su cabecera.
 Last updated: 2026-10-21 V1.1b DONE (fotos en PDF + firma cliente + paywall 49€, build+tests GREEN) | Project dir: c:\Users\trama\OneDrive\Git\ProjectSelection\presuwhats\ | Stack: Vite 8.3.4 + React 19.3.1 + TS 6 + Tailwind v4 + Router 7 + Zustand 5 + Zod 4 + jspdf 4 + PWA | Verify: npm run --prefix ./presuwhats test (9/9 PASS) + npm run --prefix ./presuwhats build (PASS, PWA 24 entries)
 
 ## DONE P1 this session (competitive polish)

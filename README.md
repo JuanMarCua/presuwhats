@@ -73,8 +73,10 @@ presuwhats/
 
 - ✅ V1.1a: voz + fotos + badge local-first
 - ✅ V1.1b: fotos en PDF + firma cliente + paywall 49 €
-- 🔲 Deploy a producción (Vercel + presuwhats.es)
-- 🔲 Venta: 20 demos, gate ≥3 pagadores para V1.2
+- ✅ V1.2: rediseño emerald orientado a conversión + landing `/promo`
+- ✅ Deploy a producción: **https://presuwhats.vercel.app**
+- 🔲 Venta: 20 demos, gate ≥3 pagadores → pasarela Stripe real
+- 🔲 Opcional: dominio propio `.es`/`.com` (ver `NEXT_STEPS.md` §2.1)
 
 ## Licencia
 

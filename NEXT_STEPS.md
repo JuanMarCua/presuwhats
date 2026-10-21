@@ -2,7 +2,8 @@
 
 > **Última actualización:** 2026-10-21 · V1.2 desplegada y validada en producción
 > **Repo:** `c:\Users\trama\OneDrive\Git\ProjectSelection\presuwhats`
-> **Producción:** https://presuwhats.vercel.app (alias activo) · https://presuwhats.es (**aún NO resuelto**)
+> **Producción:** https://presuwhats.vercel.app ← **URL DEFINITIVA Y ÚNICA**
+> **Dominio `presuwhats.es`: DESCARTADO.** No está registrado y no se va a comprar. Todo el SEO, canonical y docs apuntan a `.vercel.app`.
 > **Stack:** Vite 8.3.4 + React 19.3.1 + TS 6 + Tailwind v4 + React Router 7 + Zustand 5 + Zod 4 + jspdf 4 + vite-plugin-pwa 2
 > **Remoto Git:** `https://github.com/JuanMarCua/presuwhats.git` (rama `main`)
 
@@ -31,64 +32,50 @@
 
 ---
 
-## 2. 🔴 TAREA PRINCIPAL: registrar y activar `presuwhats.es`
+## 2. ✅ Dominio: RESUELTO con `presuwhats.vercel.app`
 
-**Estado:** el dominio **NO está registrado**. Verificado:
-```
-Resolve-DnsName presuwhats.es -Type NS  -> sin NS
-Resolve-DnsName presuwhats.es -Type A   -> sin A
-Invoke-WebRequest https://presuwhats.es -> "Host desconocido"
-```
-Vercel muestra `verified=true` en su API, pero eso es **solo por ser propietario del alias** — `configVerifiedAt`, `nsVerifiedAt` y `verificationRecord` están vacíos. **No hay delegación DNS real.**
+**Decisión tomada:** la URL pública y definitiva de PresuWhats es **`https://presuwhats.vercel.app`**. El dominio `presuwhats.es` queda **descartado**: no está registrado, no se compra y no se delega DNS.
 
-### 2.1 Nameservers a configurar (sacados de la API de Vercel)
+**Ya aplicado en el repo:**
+- `public/sitemap.xml` → las 3 URLs apuntan a `https://presuwhats.vercel.app`
+- `public/robots.txt` → `Sitemap: https://presuwhats.vercel.app/sitemap.xml`
+- `index.html` → `<link rel="canonical" href="https://presuwhats.vercel.app/" />` añadido
+- `NEXT_STEPS.md`, `DEPLOY.md`, `README.md`, `HANDOFF.md` → referencias actualizadas
+
+**Lo que NO hay que hacer:** no comprar el dominio, no tocar nameservers, no esperar propagación DNS, no configurar redirecciones `www`.
+
+### 2.1 Si algún día se quiere un dominio propio (opcional, futuro)
+Vercel ya tiene `presuwhats.es` como alias. Si en el futuro se compra, estos son los nameservers de Vercel:
 ```
 ns1.vercel-dns.com
 ns2.vercel-dns.com
 ```
-Query para volver a confirmarlos:
 ```powershell
 $t = (Get-Content "C:\Users\trama\OneDrive\Git\gitHubToken\VercelToken.txt" -Raw).Trim()
 $h = @{ Authorization = "Bearer $t" }
 (Invoke-RestMethod -Uri "https://api.vercel.com/v6/domains/presuwhats.es" -Headers $h).domain.intendedNameservers
 ```
+⚠️ Si algún día se hace, hay que actualizar **sitemap.xml, robots.txt y el canonical** de nuevo al dominio nuevo. Y ten en cuenta: `.es` exige período mínimo de 1 año + datos del titular.
 
-### 2.2 Pasos
-1. **Comprar `presuwhats.es`** en un registrar. Opciones:
-   - DonDominio (~12 €/año) — es el que sugiere `DEPLOY.md`.
-   - Criteria / Namecheap / Cloudflare Registrar.
-   - **Requisito `.es`:** período mínimo **1 año** y datos del titular (persona física o empresa con CIF). Sin esto Red.es rechaza la compra.
-   - Alternativa de reserva si no está libre: `presupuestosburgos.es` (ya está en `DEPLOY.md`).
-2. **Delegar DNS**: en el panel del registrar, cambiar los nameservers del dominio a los dos de Vercel (arriba). Esto **sustituye** los NS del registrar por los de Vercel.
-   - Alternativa si el registrar no permite cambiar NS: mantener sus NS y crear los registros que indica Vercel (`A 76.76.21.21` + `CNAME cname.vercel-dns.com` para `www`). **Preferir la opción de NS**, es la que Vercel espera.
-3. **Añadir el dominio en Vercel**: Project → Settings → Domains → añadir `presuwhats.es` y `www.presuwhats.es`. **Ya está añadido como alias** (aparece en la API de Vercel), así que probablemente solo falte la delegación DNS.
-4. **Esperar la propagación**: 5–60 min. Vercel emite el **SSL automáticamente** (Let's Encrypt) cuando ve la delegación.
-5. **Validar**:
-```powershell
-Resolve-DnsName presuwhats.es -Type NS
-Invoke-WebRequest https://presuwhats.es -UseBasicParsing    # 200
-Invoke-WebRequest https://www.presuwhats.es -UseBasicParsing
-```
-6. **Redirección `www` → apex** (o al revés): en Vercel → Project → Settings → Domains, marca uno como "Redirect to" el otro. Recomendado: `www.presuwhats.es` → `presuwhats.es`.
-7. **Actualizar `public/robots.txt` y `public/sitemap.xml`**: ya apuntan a `https://presuwhats.es` ✅ (no requiere cambios, pero verifica que la URL canónica sea la definitiva).
-
-### 2.3 Bloqueo que te vas a encontrar
-> **No se puede completar el paso 1 automáticamente**: no hay cuenta en ningún registrar ni credenciales de pago. Alguien tiene que comprar el dominio. Es la única acción que bloquea el cierre del proyecto.
+### 2.2 Nota sobre el alias de Vercel
+`https://presuwhats.es` sigue apareciendo como alias en la API de Vercel con `verified=true`, pero **no resuelve** (sin NS, sin A → "Host desconocido"). Es inocuo: no está enlazado desde ningún sitio del repo. Si molesta, se puede eliminar el alias en Vercel → Project → Settings → Domains → *Remove*.
 
 ---
 
 
 
-## 3. Tareas secundarias (opcionales, post-dominio)
+## 3. Tareas secundarias (pendientes)
 
 1. **Rotar el token de GitHub.** El remoto Git tiene el token **en claro** en la URL:
    `https://JuanMarCua:ghp_...@github.com/JuanMarCua/presuwhats.git`
    → Revoca ese PAT en GitHub y cambia el remoto a una URL sin credenciales (usa `git credential manager` o SSH).
-2. **Añadir `www.presuwhats.es` a Vercel** y configurar la redirección.
-3. **Fase P3 (Venta)** — es lo siguiente en `README.md`: kit de venta, ruta de Burgos, y reemplazar el paywall "honor system" (3 presupuestos gratis → botón de pago de 49 €) por **Stripe real**. Hoy `markPaid()` solo escribe `paid: true` en localStorage: es trivial de saltarse, es una demo, no una protección real.
-4. **Hacer el pago real del dominio** con pasarela segura (no poner datos de tarjeta en el repo ni en un `.md`).
-5. **Revisar `HANDOFF.md`** — está desactualizado (dice "V1.1b DONE", "precio 99 €", "tests 8/8"). Actualizarlo a V1.2.
-6. **`DEPLOY.md` §3** dice "copia los DNS (A 76.76.21.21 + CNAME...)" — está incompleto/obsoleto: lo correcto son los **nameservers**. Corregir.
+2. **Fase P3 (Venta)** — es lo siguiente en `README.md`: kit de venta, ruta de Burgos, y reemplazar el paywall "honor system" (3 presupuestos gratis → botón de pago de 49 €) por **Stripe real**. Hoy `markPaid()` solo escribe `paid: true` en localStorage: es trivial de saltarse, es una demo, no una protección real.
+3. **Revisar `HANDOFF.md`** — está desactualizado (dice "V1.1b DONE", "precio 99 €", "tests 8/8"). Actualizarlo a V1.2.
+4. **Quitar el alias `presuwhats.es` de Vercel** (opcional): es inocuo, pero queda como alias muerto en el panel.
+5. **Revisar el copy de venta**: en `Landing.tsx` hay comparativas tipo "3 días" / "45 min"; verificar que siguen siendo ciertas para el pitch.
+
+### 3.1 Opcional: dominio propio en el futuro
+Si en algún momento se quiere un `.es` o `.com` propio, ver §2.1. **No es bloqueante para nada**: la app funciona y se vende igual en `presuwhats.vercel.app`.
 
 ---
 
@@ -194,8 +181,10 @@ Espera ~60 s tras el push a que Vercel termine de construir antes de correr el E
 - [x] 47/47 checks E2E en producción
 - [x] 35/35 tests unitarios + build verde
 - [x] Bugs de versión / "0" fantasma / precio móvil corregidos
+- [x] **URL pública definitiva: `presuwhats.vercel.app`** (SEO: sitemap, robots, canonical)
+- [x] `DEPLOY.md` y `README.md` alineados con la URL final
 - [ ] Token de GitHub rotado y remoto sin credenciales en claro
-- [ ] **`presuwhats.es` registrado y delegado** (NS de Vercel) ← **PENDIENTE, requiere compra**
-- [ ] SSL activo en `presuwhats.es` y redirección `www` → apex
-- [ ] `HANDOFF.md` y `DEPLOY.md` actualizados a V1.2
+- [ ] `HANDOFF.md` actualizado a V1.2
 - [ ] Fase P3: pasarela de pago real (Stripe) para el pack de 49 €
+
+> 🎉 **No queda ningún bloqueo técnico.** El producto está vivo, validado y vendible en `https://presuwhats.vercel.app`.

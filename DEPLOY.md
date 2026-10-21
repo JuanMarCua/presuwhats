@@ -1,6 +1,6 @@
-# Deploy PresuWhats → Vercel + presuwhats.es (15 min, coste ~12 €/año dominio)
+# Deploy PresuWhats → Vercel (presuwhats.vercel.app)
 
-> Estado: app lista. `npm run test` 8/8 PASS. `npm run build` PASS (dist + sw.js, 23 precache). Solo falta publicar.
+> Estado: **DESPLEGADO en produccion** en https://presuwhats.vercel.app. `npm test` 35/35 PASS, `npm run build` PASS (PWA 24 precache), E2E 47/47 PASS. Este runbook queda como referencia para redeploys y para el dia que se quiera anadir dominio propio.
 
 ## 1. Subir a GitHub (2 min, en tu PC)
 ```powershell
@@ -21,11 +21,20 @@ gh repo create presuwhats --public --source=. --push
    - `/promo` landing para el QR del flyer.
    - Banner "Instalar" (Android) / hint iPhone.
 
-## 3. Dominio presuwhats.es en DonDominio (~12 €/año)
-1. Compra `presuwhats.es` (fallback: `presupuestosburgos.es`).
-2. Vercel → Project → Settings → Domains → Add `presuwhats.es` + `www.presuwhats.es` → copia los DNS (A 76.76.21.21 + CNAME cname.vercel-dns.com).
-3. DonDominio → DNS → pega esos registros. Espera 5-60 min. Vercel emite SSL solo.
-4. Comprueba `https://presuwhats.es/promo` en 4G + instala la PWA en un Xiaomi real.
+## 3. Dominio (OPCIONAL — no bloquea nada)
+La app vive y se vende en **https://presuwhats.vercel.app**. No hace falta dominio propio.
+
+Si en el futuro se quiere uno:
+1. Compra el dominio en un registrar (DonDominio ~12 €/año; `.es` exige 1 año mínimo + datos del titular).
+2. Vercel → Project → Settings → Domains → Add `<tu-dominio>` + `www`.
+3. En el registrar, cambia los **nameservers** a los de Vercel (no A/CNAME sueltos):
+   ```
+   ns1.vercel-dns.com
+   ns2.vercel-dns.com
+   ```
+4. Espera 5-60 min. Vercel emite el SSL solo.
+5. **Actualiza a la vez** `public/sitemap.xml`, `public/robots.txt` y el `<link rel="canonical">` de `index.html`.
+6. Comprueba `https://<tu-dominio>/promo` en 4G + instala la PWA en un Xiaomi real.
 
 ## 4. Checklist QA Burgos (5 min, antes del primer bar)
 - [ ] Mis datos: nombre + teléfono 9 dígitos + logo JPG <280KB → Guardado.
@@ -45,4 +54,4 @@ gh repo create presuwhats --public --source=. --push
 | OneDrive bloquea git | `git config core.fscache false`, cierra VS Code duplicado |
 
 ## 6. Coste
-Dominio ~12 €/año. Vercel Hobby 0 €. Supabase/Stripe 0 € (fase P3, solo si ≥3 pagan).
+Vercel Hobby 0 € (URL actual). Dominio opcional ~12 €/año. Stripe solo si ≥3 pagando (fase P3).
