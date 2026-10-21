@@ -7,6 +7,13 @@ preview+crear) -> /p/:id (firma, PDF, WhatsApp, recordatorio, duplicar) ->
 import json
 import re
 import sys
+
+# La consola de Windows usa cp1252 y no puede imprimir emojis: forzamos UTF-8.
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
 from playwright.sync_api import sync_playwright
 
 BASE = "https://presuwhats.vercel.app"
