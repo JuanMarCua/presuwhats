@@ -140,8 +140,8 @@ export function LineItem({ desc, qty, price, onEdit, onDelete }: { desc: string;
         <p className="text-sm font-semibold text-slate-800 truncate">{desc}</p>
         <p className="text-[11px] text-slate-400">× {qty}</p>
       </div>
-      <div className="text-right hidden sm:block">
-        <p className="text-sm font-bold text-slate-800">{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(total)}</p>
+      <div className="text-right shrink-0">
+        <p className="text-sm font-bold text-slate-800 whitespace-nowrap">{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(total)}</p>
       </div>
       <div className="flex items-center gap-2 shrink-0">
         {onEdit && (

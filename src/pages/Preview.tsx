@@ -173,7 +173,7 @@ export default function Preview() {
               <p className="text-[12px] text-emerald-800">{q.notes}</p>
             </div>
           )}
-          {q.photosB64?.length && (
+          {q.photosB64 && q.photosB64.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-2">
               {q.photosB64.slice(0, 3).map((p, i) => (
                 <img key={i} src={p} alt={`Foto ${i + 1}`} className="w-16 h-16 rounded-xl object-cover border border-slate-200" />

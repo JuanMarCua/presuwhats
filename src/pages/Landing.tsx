@@ -170,7 +170,7 @@ export default function Landing() {
       </section>
 
       <footer className="px-5 py-8 border-t border-slate-100 bg-slate-50 text-center">
-        <p className="text-[10px] font-bold tracking-wider text-slate-400">PresuWhats V1.1b · Burgos, España</p>
+        <p className="text-[10px] font-bold tracking-wider text-slate-400">PresuWhats V1.2 · Burgos, España</p>
         <p className="text-[10px] text-slate-400 mt-0.5">Hecho para autónomos de reformas en Burgos.</p>
       </footer>
     </div>

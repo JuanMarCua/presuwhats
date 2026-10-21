@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 
 .vercel
+
+# E2E artifacts
+e2e_*.png
