@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #f0fdf4;
+  --color-brand-100: #dcfce7;
+  --color-brand-600: #16a34a;
+  --color-brand-700: #15803d;
+  --font-sans: system-ui, "Segoe UI", Roboto, Inter, sans-serif;
+}
+
+html { -webkit-tap-highlight-color: transparent; scroll-behavior: smooth; }
+body {
+  background: #eef2f5;
+  color: #0f172a;
+  font-family: system-ui, "Segoe UI", Roboto, Inter, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+#root { min-height: 100svh; }
+
+.btn-big { min-height: 52px; font-size: 1.02rem; font-weight: 700; letter-spacing: 0.1px; }
+.input-big { min-height: 52px; font-size: 1rem; }
+
+/* Subtle entrance */
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.rise { animation: rise 0.35s ease both; }
+.rise-1 { animation-delay: 0.05s; }
+.rise-2 { animation-delay: 0.12s; }
+.rise-3 { animation-delay: 0.2s; }
+
+/* Sticky totals bar shadow */
+.totals-bar { box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.1); }
+
+/* Print: only quote sheet */
+@media print {
+  .no-print { display: none !important; }
+  body { background: white; }
+  .print-sheet { box-shadow: none !important; border: none !important; margin: 0 !important; max-width: none !important; }
+}
+
+
