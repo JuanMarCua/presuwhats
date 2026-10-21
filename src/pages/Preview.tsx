@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Btn, Card } from '../components/ui'
+import { Btn, Card, Badge, LineItem } from '../components/ui'
 import { calcTotals, eur, waLink, waNewQuoteText, waReminderText } from '../lib/quotes'
 import { nextQuoteNumber, useStore } from '../store'
 
@@ -11,29 +11,17 @@ export default function Preview() {
   const [copied, setCopied] = useState(false)
   const [pdfBusy, setPdfBusy] = useState(false)
   const [shared, setShared] = useState(false)
-  const [signature, setSignature] = useState<string | null>(() => q?.signatureB64 ?? null)
+  const [signature, setSignature] = useState<string | null>(null)
   const [sigPoints, setSigPoints] = useState<{ x: number; y: number }[][]>([])
   const [isDrawing, setIsDrawing] = useState(false)
   const sigRef = useRef<HTMLCanvasElement>(null)
   const q = quotes.find((x) => x.id === id)
 
-  if (!q) {
-    return (
-      <Card>
-        <h2 className="font-extrabold">Presupuesto no encontrado</h2>
-        <Btn className="mt-4 w-full" onClick={() => nav('/')}>Ir al historial</Btn>
-      </Card>
-    )
-  }
+  // Todos los hooks deben ejecutarse siempre, antes de cualquier return temprano.
+  useEffect(() => {
+    setSignature(q?.signatureB64 ?? null)
+  }, [q?.id, q?.signatureB64])
 
-  const totals = calcTotals(q.lines, q.ivaRate)
-  const fecha = new Date(q.createdAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
-  const waText = waNewQuoteText(q, totals.total)
-  const waUrl = waLink(q.clientPhone, waText)
-  const markSent = () => updateQuote(q.id, { sentAt: new Date().toISOString() })
-  const markReminded = () => updateQuote(q.id, { remindedAt: new Date().toISOString() })
-
-  // Firma cliente (canvas)
   useEffect(() => {
     const canvas = sigRef.current
     if (!canvas) return
@@ -53,6 +41,27 @@ export default function Preview() {
     })
   }, [sigPoints])
 
+  if (!q) {
+    return (
+      <Card className="rise">
+        <div className="text-center py-8">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/20 text-2xl">😕</div>
+          <h2 className="text-xl font-extrabold text-slate-900">Presupuesto no encontrado</h2>
+          <Btn className="mt-4 w-full" onClick={() => nav('/')}>Ir al historial</Btn>
+        </div>
+      </Card>
+    )
+  }
+
+  const totals = calcTotals(q.lines, q.ivaRate)
+  const fecha = new Date(q.createdAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
+  const waText = waNewQuoteText(q, totals.total)
+  const waUrl = waLink(q.clientPhone, waText)
+  const canShareNative = typeof navigator !== 'undefined' && typeof navigator.share !== 'undefined'
+
+  const markSent = () => updateQuote(q.id, { sentAt: new Date().toISOString() })
+  const markReminded = () => updateQuote(q.id, { remindedAt: new Date().toISOString() })
+
   const saveSignature = () => {
     if (!sigRef.current) return
     const data = sigRef.current.toDataURL('image/png')
@@ -63,10 +72,7 @@ export default function Preview() {
     setSigPoints([])
     setSignature(null)
     const canvas = sigRef.current
-    if (canvas) {
-      const ctx = canvas.getContext('2d')
-      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height)
-    }
+    if (canvas) { const ctx = canvas.getContext('2d'); if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height) }
     updateQuote(q.id, { signatureB64: undefined })
   }
 
@@ -85,152 +91,174 @@ export default function Preview() {
     })
   }
   const onPointerUp = () => setIsDrawing(false)
+
   const copyText = async () => {
-    try { await navigator.clipboard.writeText(waText); setCopied(true); setTimeout(() => setCopied(false), 2000) } catch { /* noop */ }
+    try { await navigator.clipboard.writeText(waText); setCopied(true); setTimeout(() => setCopied(false), 2000) } catch { }
   }
+
   const shareNative = async () => {
-    const text = waText
-    const nav2 = navigator as Navigator & { share?: (d: { title: string; text: string }) => Promise<void> }
-    if (typeof nav2.share === 'function') {
-      try {
-        await nav2.share({ title: `Presupuesto ${q!.number}`, text })
-        setShared(true); markSent(); setTimeout(() => setShared(false), 2000)
-      } catch { /* user cancelled */ }
-    } else {
-      copyText()
-    }
+    try {
+      await navigator.share({ title: `Presupuesto ${q.number}`, text: waText, url: waUrl })
+      setShared(true)
+    } catch { }
   }
-  const canShare = typeof (navigator as unknown as { share?: unknown }).share === 'function'
+
+  const downloadPDF = () => {
+    setPdfBusy(true)
+    import('../lib/pdf')
+      .then(({ generateQuotePDF }) => generateQuotePDF(profile, q))
+      .finally(() => setPdfBusy(false))
+  }
+
   const duplicate = () => {
-    const copy: Parameters<typeof addQuote>[0] = {
-      id: `${Date.now()}`,
+    const newId = `${Date.now()}`
+    addQuote({
+      id: newId,
       number: nextQuoteNumber(profile.nextNumber || quotes.length + 1),
-      clientName: q!.clientName,
-      clientPhone: q!.clientPhone,
-      lines: q!.lines.map((l) => ({ ...l })),
-      ivaRate: q!.ivaRate,
-      notes: q!.notes,
+      clientName: q.clientName + ' (copia)',
+      clientPhone: q.clientPhone,
+      lines: q.lines,
+      ivaRate: q.ivaRate,
+      notes: q.notes,
       status: 'pendiente',
       createdAt: new Date().toISOString(),
       sentAt: null,
       remindedAt: null,
-    }
-    addQuote(copy)
-    nav(`/p/${copy.id}`)
+    })
+    nav(`/p/${newId}`)
   }
-  const downloadPDF = async () => {
-    if (pdfBusy) return
-    setPdfBusy(true)
-    try {
-      const { generateQuotePDF } = await import('../lib/pdf')
-      generateQuotePDF(profile, q)
-    } finally {
-      setPdfBusy(false)
-    }
-  }
+
   return (
-    <div className="space-y-3">
-      <div className="print-sheet rise overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex items-start justify-between gap-3 bg-green-600 px-4 py-3.5 text-white">
-          <div className="min-w-0">
-            <p className="truncate text-[15px] font-extrabold">{profile.name || 'Mi negocio'}</p>
-            <p className="text-[11px] opacity-90">{[profile.phone, profile.email].filter(Boolean).join(' - ')}</p>
-          </div>
-          {profile.logoB64 && <img src={profile.logoB64} alt="Logo" className="h-11 w-11 shrink-0 rounded-lg bg-white object-cover" />}
+    <div className="space-y-4">
+      <div className="rise flex items-center justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Presupuesto {q.number}</p>
+          <h1 className="text-xl font-extrabold tracking-tight text-slate-900">{q.clientName}</h1>
+          <p className="mt-0.5 text-sm text-slate-500">{fecha} · {eur(totals.total)}</p>
         </div>
-        <div className="p-4">
-          <div className="flex items-end justify-between">
-            <div>
-              <h2 className="text-lg font-extrabold tracking-tight">Presupuesto {q.number}</h2>
-              <p className="text-xs text-slate-400">{fecha}</p>
+        <div className="flex items-center gap-2 shrink-0">
+          <Badge variant={q.status === 'aceptado' ? 'success' : q.status === 'rechazado' ? 'danger' : 'warning'}>
+            {q.status === 'pendiente' ? 'Pendiente' : q.status === 'aceptado' ? 'Aceptado' : 'Rechazado'}
+          </Badge>
+        </div>
+      </div>
+
+      <Card className="rise rise-1 overflow-hidden !p-0 border-slate-200">
+        <div className="bg-white px-4 py-3 border-b border-slate-100">
+          <div className="flex justify-between items-start gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">De</p>
+              <p className="text-sm font-bold text-slate-800">{profile.name || 'Mi negocio'}</p>
+              {profile.phone && <p className="text-xs text-slate-500">{profile.phone}</p>}
             </div>
-            <span className={`rounded-full px-2.5 py-1 text-[11px] font-extrabold ${q.status === 'aceptado' ? 'bg-green-100 text-green-700' : q.status === 'rechazado' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700'}`}>
-              {q.status.toUpperCase()}
-            </span>
+            <div className="flex-1 min-w-0 text-right">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Para</p>
+              <p className="text-sm font-bold text-slate-800">{q.clientName}</p>
+              <p className="text-xs text-slate-500">{q.clientPhone}</p>
+            </div>
+            {profile.logoB64 && <img src={profile.logoB64} alt="Logo" className="h-12 w-auto rounded-lg object-contain border border-slate-200 bg-white p-1" />}
           </div>
-          <div className="mt-3 rounded-xl bg-green-50/70 px-3 py-2.5 text-sm">
-            <p className="text-xs font-bold uppercase text-green-700">Cliente</p>
-            <p className="font-bold">{q.clientName} <span className="font-normal text-slate-500">{q.clientPhone}</span></p>
+        </div>
+        <div className="space-y-2 p-4">
+          {q.lines.map((l, i) => (
+            <LineItem key={i} desc={l.desc} qty={l.qty} price={l.price} />
+          ))}
+          <div className="border-t border-slate-200 pt-3 mt-2 space-y-1">
+            <div className="flex justify-between text-sm"><span className="text-slate-500">Base imponible</span><span className="font-bold text-slate-800">{eur(totals.subtotal)}</span></div>
+            <div className="flex justify-between text-sm"><span className="text-slate-500">IVA {q.ivaRate === 0.21 ? '21%' : '10%'}</span><span className="font-bold text-slate-800">{eur(totals.iva)}</span></div>
+            <div className="flex justify-between text-lg font-extrabold mt-1 pt-1 border-t border-slate-100"><span className="text-slate-900">Total</span><span className="text-emerald-700">{eur(totals.total)}</span></div>
           </div>
-          <div className="mt-3 divide-y divide-slate-100 text-sm">
-            {q.lines.map((l, i) => (
-              <div key={i} className="flex justify-between gap-3 py-2">
-                <p className="flex-1"><span className="font-bold text-slate-300">{i + 1}. </span>{l.desc}<span className="text-slate-400"> x {l.qty}</span></p>
-                <p className="font-bold">{eur(Math.round(l.qty * l.price * 100) / 100)}</p>
-              </div>
-            ))}
-          </div>
-          <div className="mt-2 rounded-xl bg-slate-900 p-3.5 text-white">
-            <div className="flex justify-between text-xs opacity-80"><span>Base imponible</span><span>{eur(totals.subtotal)}</span></div>
-            <div className="flex justify-between text-xs opacity-80"><span>IVA {q.ivaRate === 0.21 ? '21%' : '10%'}</span><span>{eur(totals.iva)}</span></div>
-            <div className="mt-1 flex justify-between text-xl font-extrabold"><span>TOTAL</span><span>{eur(totals.total)}</span></div>
-          </div>
-          {q.notes && <p className="mt-3 rounded-xl bg-slate-50 p-2.5 text-[13px] text-slate-600">{q.notes}</p>}
+          {q.notes && (
+            <div className="mt-3 rounded-xl bg-emerald-50 p-3">
+              <p className="text-[12px] text-emerald-800">{q.notes}</p>
+            </div>
+          )}
           {q.photosB64?.length && (
             <div className="mt-3 flex flex-wrap gap-2">
-              {q.photosB64.map((p, i) => (
-                <img key={i} src={p} alt={`Foto ${i + 1}`} className="w-20 h-20 rounded-lg object-cover border border-slate-200" />
+              {q.photosB64.slice(0, 3).map((p, i) => (
+                <img key={i} src={p} alt={`Foto ${i + 1}`} className="w-16 h-16 rounded-xl object-cover border border-slate-200" />
               ))}
             </div>
           )}
-          <div className="mt-3 flex flex-wrap gap-3 items-start">
-            <div className="flex-1 min-w-0">
-              <label className="mb-1 block text-[11px] font-bold uppercase text-slate-400">Firma del cliente</label>
-              <div className="border border-slate-300 rounded-lg bg-white">
-                <canvas
-                  ref={sigRef}
-                  onPointerDown={onPointerDown}
-                  onPointerMove={onPointerMove}
-                  onPointerUp={onPointerUp}
-                  onPointerLeave={onPointerUp}
-                  className="w-full h-24 block cursor-crosshair"
-                  width={340}
-                  height={110}
-                />
-              </div>
-              {signature && <p className="mt-1 text-[10px] text-green-700 font-medium">Firma guardada en este presupuesto</p>}
-            </div>
-            <div className="flex flex-col gap-2 mt-auto">
-              <Btn variant="ghost" onClick={saveSignature} disabled={!signature && sigPoints.length === 0}>Guardar firma</Btn>
-              <Btn variant="danger-ghost" onClick={clearSignature}>Limpiar</Btn>
-            </div>
-          </div>
-          <p className="mt-3 text-[11px] leading-relaxed text-slate-400">{profile.conditions || 'Presupuesto valido 15 dias.'} Este documento es un presupuesto, no una factura.</p>
         </div>
-      </div>
-      <div className="rise rise-1 space-y-2">
+      </Card>
+
+      {signature && (
+        <Card className="rise rise-2">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Firma del cliente</p>
+            <span className="text-[10px] text-emerald-600 font-bold">Guardada ✓</span>
+          </div>
+          <div className="mt-2 flex items-center gap-3">
+            <img src={signature} alt="Firma" className="h-10 rounded-lg border border-slate-200 bg-white" />
+            <Btn variant="danger-ghost" className="!py-2 !text-xs" onClick={clearSignature}>Quitar</Btn>
+          </div>
+        </Card>
+      )}
+
+      {!signature && (
+        <Card className="rise rise-2">
+          <div className="mb-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Firma del cliente (opcional)</p>
+            <p className="mt-0.5 text-xs text-slate-500">El cliente puede firmar directamente en la pantalla.</p>
+          </div>
+          <div className="border border-slate-200 rounded-xl bg-white">
+            <canvas
+              ref={sigRef}
+              onPointerDown={onPointerDown}
+              onPointerMove={onPointerMove}
+              onPointerUp={onPointerUp}
+              onPointerLeave={onPointerUp}
+              className="w-full h-24 block cursor-crosshair"
+              width={340}
+              height={110}
+            />
+          </div>
+          <div className="flex flex-col gap-2 mt-3">
+            <Btn variant="ghost" onClick={saveSignature} disabled={!signature && sigPoints.length === 0} className="w-full">Guardar firma</Btn>
+            <Btn variant="danger-ghost" onClick={clearSignature} className="w-full">Limpiar</Btn>
+          </div>
+          <p className="mt-2 text-[10px] leading-relaxed text-slate-400">{profile.conditions || 'Presupuesto valido 15 dias.'} Este documento es un presupuesto, no una factura.</p>
+        </Card>
+      )}
+      <div className="rise rise-3 space-y-2">
         <a href={waUrl} target="_blank" rel="noreferrer" onClick={markSent}
-          className="btn-big flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-3 text-white shadow-sm">
+          className="btn-big flex w-full items-center justify-center gap-2 rounded-2xl bg-[#25D366] px-4 py-3 text-white shadow-[0_4px_12px_-2px_rgba(37,211,102,0.4)] hover:shadow-[0_6px_16px_-2px_rgba(37,211,102,0.5)] transition-all">
           <span className="text-lg">W</span> Enviar por WhatsApp
         </a>
-        {canShare && (
-          <Btn variant="dark" className="w-full" onClick={shareNative}>{shared ? 'Compartido ✓' : 'Compartir (WhatsApp, Telegram, Email...)'}</Btn>
+        {canShareNative && (
+          <Btn variant="dark" className="w-full" onClick={shareNative}>{shared ? 'Compartido ✓' : 'Compartir'}</Btn>
         )}
         <div className="grid grid-cols-2 gap-2">
-          <Btn variant="dark" onClick={downloadPDF}>{pdfBusy ? 'Generando...' : 'PDF'}</Btn>
-          <Btn variant="ghost" onClick={() => window.print()}>Imprimir</Btn>
+          <Btn variant="primary" onClick={downloadPDF} disabled={pdfBusy} className="w-full">{pdfBusy ? 'Generando...' : 'PDF'}</Btn>
+          <Btn variant="ghost" onClick={() => window.print()} className="w-full">Imprimir</Btn>
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <Btn variant="ghost" onClick={copyText}>{copied ? 'Copiado' : 'Copiar texto'}</Btn>
+        <div className="grid grid-cols-2 gap-2 mt-2">
+          <Btn variant="ghost" onClick={copyText}>{copied ? 'Copiado ✓' : 'Copiar texto'}</Btn>
           <a href={waLink(q.clientPhone, waReminderText(q, totals.total))} target="_blank" rel="noreferrer" onClick={markReminded}
-            className="btn-big inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-700">
+            className="btn-big inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-700 shadow-sm hover:bg-slate-50 transition-all">
             Recordatorio
           </a>
         </div>
-        {q.sentAt && <p className="text-center text-xs text-slate-400">Enviado el {new Date(q.sentAt).toLocaleDateString('es-ES')}</p>}
+        {q.sentAt && <p className="mt-2 text-center text-xs text-slate-400">Enviado el {new Date(q.sentAt).toLocaleDateString('es-ES')}</p>}
       </div>
-      <Card className="rise rise-2">
-        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">Estado del trabajo</p>
+
+      <Card className="rise rise-4">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Estado del trabajo</p>
+        </div>
         <div className="grid grid-cols-3 gap-2">
           {(['pendiente', 'aceptado', 'rechazado'] as const).map((s) => (
             <button key={s} onClick={() => updateQuote(q.id, { status: s })}
-              className={`rounded-xl border px-2 py-2.5 text-sm font-extrabold capitalize ${q.status === s ? (s === 'aceptado' ? 'border-green-600 bg-green-50 text-green-700' : s === 'rechazado' ? 'border-red-400 bg-red-50 text-red-600' : 'border-amber-400 bg-amber-50 text-amber-700') : 'border-slate-200 bg-white text-slate-400'}`}>
+              className={`rounded-xl border px-2 py-2.5 text-xs font-bold capitalize transition-all ${q.status === s ? (s === 'aceptado' ? 'border-emerald-600 bg-emerald-50 text-emerald-700' : s === 'rechazado' ? 'border-red-400 bg-red-50 text-red-600' : 'border-amber-400 bg-amber-50 text-amber-700') : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300'}`}>
               {s}
             </button>
           ))}
         </div>
-        <Btn variant="ghost" className="mt-3 w-full" onClick={() => nav('/')}>Volver al historial</Btn>
-        <Btn variant="ghost" className="mt-2 w-full" onClick={duplicate}>Duplicar para otro cliente</Btn>
+        <div className="mt-3 flex gap-2">
+          <Btn variant="ghost" className="flex-1" onClick={() => nav('/')}>Volver al historial</Btn>
+          <Btn variant="outline" className="flex-1" onClick={duplicate}>Duplicar</Btn>
+        </div>
       </Card>
     </div>
   )

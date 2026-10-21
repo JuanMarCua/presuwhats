@@ -1,4 +1,5 @@
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { defineConfig } from 'vitest/config'
 
@@ -6,13 +7,14 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   plugins: [
     react(),
+    tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
         name: 'PresuWhats - Presupuestos en 60s',
         short_name: 'PresuWhats',
         description: 'Crea presupuestos profesionales en 60 segundos y envialos por WhatsApp. Para autonomos en Burgos.',
-        theme_color: '#16a34a',
+        theme_color: '#059669',
         background_color: '#ffffff',
         display: 'standalone',
         scope: '/',
